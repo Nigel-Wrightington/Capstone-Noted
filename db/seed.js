@@ -15,15 +15,15 @@ async function seed() {
   const {
     rows: [user],
   } = await db.query(`
-    INSERT INTO users (username, password)
-    VALUES ('user1', 'password1')
+    INSERT INTO users (id, first_name, last_name, username, password)
+    VALUES ('1001', 'jane', 'doe', 'user1', 'password1')
     RETURNING *;
   `);
   // Insert 3 Albums -- TO DO
   const albums = [
-    ["Lover", "Taylor Swift", "Pop", Img],
-    ["Encore", "Eminem", "Rap", Img],
-    ["I Got A Name", "Jim Croce", "Rock", Img]
+    ["Lover", "Taylor Swift", "Pop", "https://example.com/lover.jpg"],
+    ["Encore", "Eminem", "Rap", "https://example.com/encore.jpg"],
+    ["I Got A Name", "Jim Croce", "Rock", "https://example.com/jim.jpg"]
   ]
 
   // Insert 3 Reviews -- TO DO
