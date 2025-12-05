@@ -5,6 +5,7 @@
 import express from "express";
 import multer from "multer";
 import db from "../db.js";
+import requireUser from "../middleware/requireUser.js";
 
 const router = express.Router();
 
@@ -132,5 +133,80 @@ router.get("/:id", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+async function updateReview({ id, userId, rating, comment }) {
+  const fields = [];
+  const values = [];
+  let idx = 1;
+
+  if (rating !== undefined) {
+    fields.push(`rating = $${idx++}`);
+    values.push(rating);
+  }
+  if (comment !== undefined) {
+    fields.push(`comment = $${idx++}`);
+    values.push(comment);
+  }
+
+  if (fields.length === 0) {
+    return null;
+  }
+
+  values.push(id);
+  values.push(userId);
+
+  const setClause = fields.join(", ");
+  const { rows } = await client.query(
+    `UPDATE reviews
+     SET ${setClause}, updated_at = NOW()
+     WHERE id = $${idx++} AND user_id = $${idx++}
+     RETURNING *`,
+    values
+  );
+
+  return rows[0];
+}
+
+// PUT /reviews/:id
+router.put("/:id", requireUser, async (req, res, next) => {
+  try {
+    const reviewId = Number(req.params.id);
+    if (!Number.isInteger(reviewId)) {
+      return res.status(400).json({ error: "Invalid review id" });
+    }
+
+    const userId = req.user && req.user.id;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const { rating, comment } = req.body;
+    if (rating === undefined && comment === undefined) {
+      return res.status(400).json({ error: "No fields provided to update" });
+    }
+
+    // Optionally check existence/ownership first (for clearer 404 vs 403)
+    const updated = await updateReview({
+      id: reviewId,
+      userId,
+      rating,
+      comment,
+    });
+
+    if (!updated) {
+      // Either review doesn't exist, or not owned by user (or nothing to update)
+      return res
+        .status(404)
+        .json({ error: "Review not found or not owned by user" });
+    }
+
+    return res.json({ review: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
+module.exports = {
+  // ...existing exports
+  updateReview,
+};
 
 export default router;
