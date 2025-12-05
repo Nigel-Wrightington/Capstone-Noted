@@ -14,7 +14,7 @@ router
     const user = await createUser(first_name, last_name, username, password);
 
     const token = await createToken({ id: user.id });
-    res.status(201).send(token);
+    res.status(201).send( { token });
   });
 
 // LOGIN VERTICAL SLICE // LOGOUT SLICE WOULD BE DELETING THE TOKEN FROM FRONTEND -- SHERIN //
