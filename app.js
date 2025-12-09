@@ -3,7 +3,7 @@ const app = express();
 export default app;
 
 import usersRouter from "#api/users";
-import reviewsRouter from "#api/users";
+import reviewsRouter from "#api/reviews";
 import getUserFromToken from "#middleware/getUserFromToken";
 import handlePostgresErrors from "#middleware/handlePostgresErrors";
 import cors from "cors";
@@ -15,6 +15,11 @@ app.use(morgan("dev"));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+import path from "path";
+
+// serve uploaded files at /uploads/<filename>
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.use(getUserFromToken);
 
