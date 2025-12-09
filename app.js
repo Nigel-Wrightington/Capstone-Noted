@@ -16,6 +16,11 @@ app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+import path from "path";
+
+// serve uploaded files at /uploads/<filename>
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
 app.use(getUserFromToken);
 
 app.get("/", (req, res) => res.send("Hello, World!"));

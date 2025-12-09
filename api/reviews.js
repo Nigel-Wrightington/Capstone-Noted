@@ -4,8 +4,8 @@
 
 import express from "express";
 import multer from "multer";
-import db from "../db.js";
-import requireUser from "../middleware/requireUser.js";
+import db from "#db/client";
+import requireUser from "#middleware/requireUser";
 
 const router = express.Router();
 
@@ -203,10 +203,5 @@ router.put("/:id", requireUser, async (req, res, next) => {
     next(err);
   }
 });
-
-module.exports = {
-  // ...existing exports
-  updateReview,
-};
 
 export default router;
