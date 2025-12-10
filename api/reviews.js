@@ -7,7 +7,10 @@ import multer from "multer";
 import db from "#db/client";
 import requireUser from "#middleware/requireUser";
 
+
 const router = express.Router();
+
+
 
 // Multer Setup for Album Cover Uploads
 const storage = multer.diskStorage({
@@ -110,6 +113,36 @@ router.get("/", async (req, res) => {
   }
 });
 
+
+// get highest reviews for home page Lauren is working on this.
+// GET /reviews/highest-rated
+router.get("/highest-rated", async (req, res) => {
+try {
+const result = await db.query(
+  `SELECT 
+  reviews.id,
+  reviews.rating,
+  albums.title,
+  albums.artist,
+  albums.genre,
+  albums.img
+  FROM reviews
+  JOIN albums ON albums.id = reviews.album_id
+  ORDER by reviews.rating DESC, reviews.id DESC
+  LIMIT 10
+  `
+);
+
+res.json(result.rows);
+} catch (error) {
+  console.log("Error fetching highest rated reviews:", error);
+  res.status(500).json({error: "Internal server Error"});
+}
+});
+
+
+
+
 // GET /reviews/:id
 router.get("/:id", async (req, res) => {
   try {
@@ -156,7 +189,7 @@ async function updateReview({ id, userId, rating, comment }) {
   values.push(userId);
 
   const setClause = fields.join(", ");
-  const { rows } = await client.query(
+  const { rows } = await db.query(
     `UPDATE reviews
      SET ${setClause}, updated_at = NOW()
      WHERE id = $${idx++} AND user_id = $${idx++}
@@ -203,9 +236,6 @@ router.put("/:id", requireUser, async (req, res, next) => {
     next(err);
   }
 });
-
-// get highest reviews for home page Lauren is working on this.
-
 
 
 
