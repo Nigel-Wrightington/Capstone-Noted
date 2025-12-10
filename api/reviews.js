@@ -204,4 +204,32 @@ router.put("/:id", requireUser, async (req, res, next) => {
   }
 });
 
+// DELETE /reviews/:id
+router.delete("/:id", requireUser, async (req, res, next) => {
+  try {
+    const reviewId = Number(req.params.id);
+    if (!Number.isInteger(reviewId)) {
+      return res.status(400).json({ error: "Invalid review id" });
+    }
+
+    const userId = req.user && req.user.id;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const result = await db.query(
+      `DELETE FROM reviews WHERE id = $1 AND user_id = $2 RETURNING id`,
+      [reviewId, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ error: "Review not found or not owned by user" });
+    }
+
+    res.json({ message: "Review deleted successfully", id: result.rows[0].id });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;
