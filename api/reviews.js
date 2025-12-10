@@ -204,4 +204,11 @@ router.put("/:id", requireUser, async (req, res, next) => {
   }
 });
 
+// get highest reviews for home page Lauren is working on this.
+
+
+
+
+
+
 export default router;
