@@ -134,7 +134,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-async function updateReview({ id, userId, rating, comment }) {
+async function updateReview({ id, userId, rating, review }) {
   const fields = [];
   const values = [];
   let idx = 1;
@@ -143,9 +143,9 @@ async function updateReview({ id, userId, rating, comment }) {
     fields.push(`rating = $${idx++}`);
     values.push(rating);
   }
-  if (comment !== undefined) {
-    fields.push(`comment = $${idx++}`);
-    values.push(comment);
+  if (review !== undefined) {
+    fields.push(`review = $${idx++}`);
+    values.push(review);
   }
 
   if (fields.length === 0) {
@@ -156,9 +156,9 @@ async function updateReview({ id, userId, rating, comment }) {
   values.push(userId);
 
   const setClause = fields.join(", ");
-  const { rows } = await client.query(
+  const { rows } = await db.query(
     `UPDATE reviews
-     SET ${setClause}, updated_at = NOW()
+     SET ${setClause}
      WHERE id = $${idx++} AND user_id = $${idx++}
      RETURNING *`,
     values
@@ -178,8 +178,8 @@ router.put("/:id", requireUser, async (req, res, next) => {
     const userId = req.user && req.user.id;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-    const { rating, comment } = req.body;
-    if (rating === undefined && comment === undefined) {
+    const { rating, review } = req.body;
+    if (rating === undefined && review === undefined) {
       return res.status(400).json({ error: "No fields provided to update" });
     }
 
@@ -188,7 +188,7 @@ router.put("/:id", requireUser, async (req, res, next) => {
       id: reviewId,
       userId,
       rating,
-      comment,
+      review,
     });
 
     if (!updated) {
@@ -199,6 +199,34 @@ router.put("/:id", requireUser, async (req, res, next) => {
     }
 
     return res.json({ review: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /reviews/:id
+router.delete("/:id", requireUser, async (req, res, next) => {
+  try {
+    const reviewId = Number(req.params.id);
+    if (!Number.isInteger(reviewId)) {
+      return res.status(400).json({ error: "Invalid review id" });
+    }
+
+    const userId = req.user && req.user.id;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const result = await db.query(
+      `DELETE FROM reviews WHERE id = $1 AND user_id = $2 RETURNING id`,
+      [reviewId, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ error: "Review not found or not owned by user" });
+    }
+
+    res.json({ message: "Review deleted successfully", id: result.rows[0].id });
   } catch (err) {
     next(err);
   }
