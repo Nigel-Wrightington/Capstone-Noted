@@ -73,6 +73,9 @@ router.post("/", upload.single("cover"), async (req, res) => {
       albumId = newAlbum.rows[0].id;
     } else {
       albumId = existingAlbum.rows[0].id;
+      if (img) {
+    await db.query(`UPDATE albums SET img = $1 WHERE id = $2`, [img, albumId]);
+  }
     }
 
     // 3. Insert Review
@@ -84,11 +87,18 @@ router.post("/", upload.single("cover"), async (req, res) => {
       `,
       [parsedRating, description, user_id, albumId]
     );
-
+const albumData = await db.query(
+  `SELECT title, artist, genre, img FROM albums WHERE id = $1`,
+  [albumId]
+);
     res.json({
       message: "Review posted successfully",
-      review: newReview.rows[0],
+      review: { 
+        ...newReview.rows[0],
+        ...albumData.rows[0],
+      }
     });
+   
   } catch (err) {
     console.error("Error posting review:", err);
     res.status(500).json({ error: "Internal server error" });
@@ -117,28 +127,35 @@ router.get("/", async (req, res) => {
 // get highest reviews for home page Lauren is working on this.
 // GET /reviews/highest-rated
 router.get("/highest-rated", async (req, res) => {
-try {
-const result = await db.query(
-  `SELECT 
-  reviews.id,
-  reviews.rating,
-  albums.title,
-  albums.artist,
-  albums.genre,
-  albums.img
-  FROM reviews
-  JOIN albums ON albums.id = reviews.album_id
-  ORDER by reviews.rating DESC, reviews.id DESC
-  LIMIT 10
-  `
-);
+  try {
+    const result = await db.query(
+      `SELECT 
+         reviews.id,
+         reviews.rating,
+         reviews.review,
+         albums.title,
+         albums.artist,
+         albums.genre,
+         albums.img
+       FROM reviews
+       JOIN albums ON albums.id = reviews.album_id
+       ORDER BY reviews.rating DESC, reviews.id DESC
+       LIMIT 10`
+    );
 
-res.json(result.rows);
-} catch (error) {
-  console.log("Error fetching highest rated reviews:", error);
-  res.status(500).json({error: "Internal server Error"});
-}
+    // Prevent caching
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.set("Pragma", "no-cache");
+    res.set("Expires", "0");
+    res.set("Surrogate-Control", "no-store");
+
+    res.json(result.rows);
+  } catch (error) {
+    console.log("Error fetching highest rated reviews:", error);
+    res.status(500).json({ error: "Internal server Error" });
+  }
 });
+
 
 
 
@@ -148,7 +165,11 @@ router.get("/:id", async (req, res) => {
   try {
     const result = await db.query(
       `
-        SELECT reviews.*, albums.title, albums.artist, albums.genre, albums.img
+        SELECT reviews.*, 
+        albums.title, 
+        albums.artist, 
+        albums.genre, 
+        albums.img
         FROM reviews
         JOIN albums ON albums.id = reviews.album_id
         WHERE reviews.id = $1
